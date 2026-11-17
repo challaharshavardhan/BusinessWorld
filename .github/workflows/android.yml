@@ -13,20 +13,46 @@ on:
 
 jobs:
   android:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     container:
       image: barichello/godot-ci:4.4
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Configure Godot export environment
+        run: |
+          set -eu
+          mkdir -p "$HOME/.local/share/godot/export_templates"
+          mkdir -p "$HOME/.config/godot"
+          cp -a /root/.local/share/godot/export_templates/4.4.stable "$HOME/.local/share/godot/export_templates/"
+          if [ -d /root/.config/godot ]; then
+            cp -a /root/.config/godot/. "$HOME/.config/godot/"
+          fi
+          echo "Installed export templates:"
+          ls -l "$HOME/.local/share/godot/export_templates/4.4.stable/android_debug.apk"
+          java -version
+          test -x /usr/lib/jvm/java-17-openjdk-amd64/bin/java
+          mkdir -p "$HOME/.config/godot"
+          SETTINGS="$HOME/.config/godot/editor_settings-4.4.tres"
+          if [ ! -f "$SETTINGS" ]; then
+            printf '[gd_resource type="EditorSettings" format=3]\n\n[resource]\n' > "$SETTINGS"
+          fi
+          sed -i '/^export\/android\/java_sdk_path = /d' "$SETTINGS"
+          sed -i '/^export\/android\/android_sdk_path = /d' "$SETTINGS"
+          printf 'export/android/java_sdk_path = "/usr/lib/jvm/java-17-openjdk-amd64"\n' >> "$SETTINGS"
+          printf 'export/android/android_sdk_path = "/usr/lib/android-sdk"\n' >> "$SETTINGS"
+
       - name: Prepare Android debug signing
         run: |
-          mkdir -p /root/.android build
-          keytool -genkeypair -v -keystore /root/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
-          echo "GODOT_ANDROID_KEYSTORE_DEBUG_PATH=/root/.android/debug.keystore" >> "$GITHUB_ENV"
+          mkdir -p "$HOME/.android" build
+          keytool -genkeypair -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          echo "GODOT_ANDROID_KEYSTORE_DEBUG_PATH=$HOME/.android/debug.keystore" >> "$GITHUB_ENV"
           echo "GODOT_ANDROID_KEYSTORE_DEBUG_USER=androiddebugkey" >> "$GITHUB_ENV"
           echo "GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android" >> "$GITHUB_ENV"
+
+      - name: Import Godot assets and check scripts
+        run: godot --headless --editor --path . --import
 
       - name: Export APK
         run: godot --headless --path . --export-debug "Android" build/BusinessWorld-debug.apk
