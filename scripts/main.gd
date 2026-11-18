@@ -138,6 +138,7 @@ func _make_ui() -> void:
 
 func _refresh_ui() -> void:
     money_label.text = "Cash: $%d" % cash
+    build_button.disabled = bakery_tile.x >= 0
     if bakery_tile.x >= 0:
         status_label.text = "Bakery built! Next: customers and sales"
         build_button.text = "Bakery constructed ✓"
