@@ -231,7 +231,9 @@ func _shelf(root: Node3D, p: Vector3, kind: int) -> Node3D:
 func _make_market() -> void:
     _box(market_root, Vector3(0, -0.19, 0), Vector3(23, 0.34, 16.5), Color("#f5cf8d"))
     _box(market_root, Vector3(0, 0.03, -7.8), Vector3(23, 0.24, 0.8), Color("#bb7150"))
-    _box(market_root, Vector3(10.9, 0.03, 0), Vector3(0.8, 0.24, 16), Color("#b97550"))
+    # Open corridor on the east side connects the future market wings.
+    _box(market_root, Vector3(10.9, 0.03, -5.4), Vector3(0.8, 0.24, 5.2), Color("#b97550"))
+    _box(market_root, Vector3(10.9, 0.03, 5.4), Vector3(0.8, 0.24, 5.2), Color("#b97550"))
     _fence(market_root, Vector3(-10.8, 0, -7), Vector3(-10.8, 0, 7.1), 9)
     _fence(market_root, Vector3(-10.8, 0, 7.1), Vector3(10.8, 0, 7.1), 12)
     _box(market_root, Vector3(5, 2.0, -7.5), Vector3(9.5, 4.0, 0.4), Color("#a95a46"))
@@ -511,7 +513,7 @@ func _make_ui() -> void:
     right_controls.offset_left = -192
     right_controls.offset_right = -10
     right_controls.offset_top = 100
-    right_controls.offset_bottom = 440
+    right_controls.offset_bottom = 518
     right_controls.add_theme_constant_override("separation", 6)
     root.add_child(right_controls)
     hire_button = Button.new()
@@ -522,6 +524,10 @@ func _make_ui() -> void:
     egg_button.custom_minimum_size = Vector2(180, 54)
     egg_button.pressed.connect(_unlock_eggs)
     right_controls.add_child(egg_button)
+    expand_button = Button.new()
+    expand_button.custom_minimum_size = Vector2(180, 54)
+    expand_button.pressed.connect(_expand_world)
+    right_controls.add_child(expand_button)
     zoom_in_button = Button.new()
     zoom_in_button.text = "ZOOM +"
     zoom_in_button.custom_minimum_size = Vector2(180, 54)
@@ -621,6 +627,8 @@ func _refresh_ui() -> void:
         hire_button.text = "STAFF MAX" if workers_hired >= 3 else "HIRE $%d" % (70 + 60 * workers_hired)
         egg_button.disabled = machine_unlocked
         egg_button.text = "EGGS READY" if machine_unlocked else "EGG STALL $80"
+        expand_button.disabled = expansion_level >= 2
+        expand_button.text = "LAND MAX" if expansion_level >= 2 else "EXPAND $%d" % _expansion_cost()
     if customer_queue.size() > 0:
         var wanted: int = int(customer_queue[0]["kind"])
         detail.text = "NEXT: %s   |   Carry: %s %d/%d" % [PRODUCT_NAMES[wanted], PRODUCT_NAMES[carry_type] if carry_type >= 0 else "None", carry_count, capacity]
@@ -628,8 +636,10 @@ func _refresh_ui() -> void:
         detail.text = "Customers arriving  |  Carry %d/%d" % [carry_count, capacity]
     if toast_timer > 0.0:
         tip.text = floating_message
+    elif expansion_level == 0:
+        tip.text = "Customer cash piles up at the green mat • Collect it to hire or expand!"
     elif not machine_unlocked:
-        tip.text = "Serve customers to earn cash • HIRE STAFF $70 • EGG STALL $80"
+        tip.text = "Explore EAST: harvest tomatoes, deliver wholesale, collect cash, expand again."
     else:
         tip.text = "Collect stock • Serve waiting customers • Keep growing your shop"
 
@@ -679,7 +689,8 @@ func _process(delta: float) -> void:
         var screen_up := Vector3(camera.global_transform.basis.y.x, 0, camera.global_transform.basis.y.z).normalized()
         var movement := (screen_right * joystick_direction.x - screen_up * joystick_direction.y).normalized()
         player.position += movement * 5.8 * delta * minf(1.0, joystick_direction.length())
-        player.position.x = clampf(player.position.x, -9.7, 9.7)
+        var right_edge := 9.7 if expansion_level == 0 else (22.7 if expansion_level == 1 else 35.0)
+        player.position.x = clampf(player.position.x, -9.7, right_edge)
         player.position.z = clampf(player.position.z, -6.2, 6.2)
         player.rotation.y = lerp_angle(player.rotation.y, atan2(movement.x, movement.z), minf(delta * 11.0, 1.0))
     for i in range(workers.size()):
@@ -692,6 +703,10 @@ func _process(delta: float) -> void:
         _worker_service()
     if stock_timer >= 2.5:
         stock_timer = 0.0
+        if expansion_level >= 1:
+            farm_stock = mini(22, farm_stock + 1)
+        if expansion_level >= 2:
+            orchard_stock = mini(22, orchard_stock + 1)
         for i in range(4):
             if i < 3 or machine_unlocked:
                 shelf_stock[i] = mini(16, shelf_stock[i] + 1)
@@ -702,6 +717,35 @@ func _process(delta: float) -> void:
     _refresh_ui()
 
 func _try_interact() -> void:
+    if expansion_level < 2 and player.position.distance_to(expansion_pad.position) < 1.4 and cash >= _expansion_cost():
+        _expand_world()
+        return
+    if expansion_level >= 1 and carry_count > 0 and player.position.distance_to(Vector3(17.2, 0, -2.4)) < 2.2:
+        var payout := carry_count * (9 + (2 if expansion_level >= 2 else 0))
+        _cash_payment(payout, Vector3(17.2, 0, -2.4))
+        sales += payout
+        _say("Wholesale delivery! $%d added to the cash pile." % payout)
+        carry_count = 0
+        carry_type = -1
+        _render_carry()
+        _save_game()
+        return
+    if expansion_level >= 1 and carry_count == 0 and farm_stock > 0 and player.position.distance_to(Vector3(17.9, 0, 4.1)) < 2.3:
+        carry_type = 0
+        carry_count = mini(capacity, farm_stock)
+        farm_stock -= carry_count
+        _render_carry()
+        _say("Harvested %d tomatoes in the new yard." % carry_count)
+        _save_game()
+        return
+    if expansion_level >= 2 and carry_count == 0 and orchard_stock > 0 and player.position.distance_to(Vector3(30, 0, 3.9)) < 2.4:
+        carry_type = 2
+        carry_count = mini(capacity, orchard_stock)
+        orchard_stock -= carry_count
+        _render_carry()
+        _say("Harvested %d carrots in the orchard." % carry_count)
+        _save_game()
+        return
     if pending_cash > 0 and player.position.distance_to(Vector3(-5.0, 0, 0.1)) < 1.65:
         _collect_cash()
         return
@@ -825,6 +869,9 @@ func _save_game() -> void:
         "pending_cash": pending_cash,
         "machine_unlocked": machine_unlocked,
         "workers_hired": workers_hired,
+        "expansion_level": expansion_level,
+        "farm_stock": farm_stock,
+        "orchard_stock": orchard_stock,
         "camera_zoom_size": camera_zoom_size,
         "carry_type": carry_type, "carry_count": carry_count,
         "stock": shelf_stock,
@@ -849,6 +896,9 @@ func _load_game() -> void:
         served = maxi(0, int(data.get("served", 0)))
         machine_unlocked = bool(data.get("machine_unlocked", false))
         workers_hired = clampi(int(data.get("workers_hired", 0)), 0, 3)
+        expansion_level = clampi(int(data.get("expansion_level", 0)), 0, 2)
+        farm_stock = clampi(int(data.get("farm_stock", 12)), 0, 22)
+        orchard_stock = clampi(int(data.get("orchard_stock", 12)), 0, 22)
         camera_zoom_size = clampf(float(data.get("camera_zoom_size", 12.5)), 7.5, 22.0)
         carry_type = clampi(int(data.get("carry_type", -1)), -1, 3)
         carry_count = clampi(int(data.get("carry_count", 0)), 0, capacity)
@@ -871,6 +921,10 @@ func _reset() -> void:
     sales = 0
     machine_unlocked = false
     workers_hired = 0
+    expansion_level = 0
+    farm_stock = 12
+    orchard_stock = 12
+    _refresh_expansion_world()
     worker_clock = 0.0
     game_clock = 0.0
     for staff in workers:
