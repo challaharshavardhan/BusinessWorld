@@ -45,6 +45,8 @@ var reset_button: Button
 var joystick_panel: Panel
 var joystick_thumb: Panel
 var product_labels: Array[Label3D] = []
+var carried_meshes: Array[MeshInstance3D] = []
+var saved_player_position := Vector3(-2, 0, 4.0)
 var unlock_pad: Node3D
 
 func _ready() -> void:
@@ -230,8 +232,12 @@ func _make_market() -> void:
     _build_egg_machine(unlock_pad)
     unlock_pad.visible = machine_unlocked
     _text3d(market_root, Vector3(-1.3, 3, -1.5), "CHECKOUT", 42)
-    player = _person(market_root, Vector3(-2, 0, 4.0), Color("#f4d7d2"))
+    player = _person(market_root, saved_player_position, Color("#f4d7d2"))
     _box(player, Vector3(0, 1.15, 0.4), Vector3(0.55, 0.83, 0.12), Color("#ec7190"))
+    for i in range(capacity):
+        var cargo := _ball(player, Vector3(-0.38 + float(i % 3) * 0.38, 2.55 + float(i / 3) * 0.38, 0), 0.19, Color("#fff4db"))
+        carried_meshes.append(cargo)
+    _render_carry()
     for i in range(2):
         _person(market_root, Vector3(1.5 + i * 1.45, 0, -3.4), Color("#6bacc2"), true)
     _update_shelf_labels()
@@ -242,6 +248,12 @@ func _build_egg_machine(root: Node3D) -> void:
     for i in range(4):
         _ball(root, Vector3(-0.55 + i * 0.37, 1.42, 0), 0.22, PRODUCT_COLORS[3])
     _text3d(root, Vector3(0, 2.35, 0), "EGG PACKER", 36)
+
+func _render_carry() -> void:
+    for i in range(carried_meshes.size()):
+        carried_meshes[i].visible = i < carry_count
+        if carry_type >= 0 and carry_type < PRODUCT_COLORS.size():
+            carried_meshes[i].material_override = _material(PRODUCT_COLORS[carry_type])
 
 func _update_shelf_labels() -> void:
     for label in product_labels:
@@ -416,6 +428,7 @@ func _try_interact() -> void:
                     carry_type = i
                     carry_count = mini(capacity, shelf_stock[i])
                     shelf_stock[i] -= carry_count
+                    _render_carry()
                     _say("Switched to %s" % PRODUCT_NAMES[i])
                     _update_shelf_labels()
                     _save_game()
@@ -424,6 +437,7 @@ func _try_interact() -> void:
                     var amount := mini(capacity - carry_count, shelf_stock[i])
                     carry_count += amount
                     shelf_stock[i] -= amount
+                    _render_carry()
                     _update_shelf_labels()
                     _save_game()
                     return
@@ -435,6 +449,7 @@ func _try_interact() -> void:
                 carry_type = i
                 carry_count = mini(capacity, shelf_stock[i])
                 shelf_stock[i] -= carry_count
+                _render_carry()
                 _say("Picked up %d %s" % [carry_count, PRODUCT_NAMES[i]])
                 _update_shelf_labels()
                 _save_game()
@@ -451,6 +466,7 @@ func _try_interact() -> void:
             served += 1
             if carry_count == 0:
                 carry_type = -1
+            _render_carry()
             _say("+$%d  Sale complete!" % (12 + kind * 3))
             _save_game()
         else:
@@ -512,6 +528,7 @@ func _load_game() -> void:
         machine_unlocked = bool(data.get("machine_unlocked", false))
         carry_type = clampi(int(data.get("carry_type", -1)), -1, 3)
         carry_count = clampi(int(data.get("carry_count", 0)), 0, capacity)
+        saved_player_position = Vector3(float(data.get("player_x", -2.0)), 0, float(data.get("player_z", 4.0)))
         var old_stock = data.get("stock", [9, 9, 9, 0])
         if old_stock is Array and old_stock.size() == 4:
             for i in range(4):
@@ -536,6 +553,7 @@ func _reset() -> void:
     if is_instance_valid(player):
         player.position = Vector3(-2, 0, 4.0)
     unlock_pad.visible = false
+    _render_carry()
     _update_shelf_labels()
     _save_game()
     _set_mode("town")
