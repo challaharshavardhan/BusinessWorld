@@ -6,6 +6,20 @@ const TILE_H := 46.0
 const SAVE_PATH := "user://business_world_v01.json"
 const BAKERY_COST := 200
 const START_CASH := 500
+const HOUSE_COST := 120
+const BASE_POPULATION := 20
+const BASE_HOUSES := [Vector2i(5, 7), Vector2i(7, 6), Vector2i(18, 8), Vector2i(20, 12), Vector2i(6, 17)]
+const TREE_TILES := [Vector2i(4, 4), Vector2i(8, 19), Vector2i(20, 20), Vector2i(3, 15), Vector2i(14, 4)]
+var bread_price := 5
+var new_houses: Array[Vector2i] = []
+var house_mode := false
+var game_seconds := 0.0
+var lost_sales := 0
+var price_down_button: Button
+var price_up_button: Button
+var house_button: Button
+var town_label: Label
+
 const BREAD_PRICE := 5
 var flour := 20
 var bread := 5
@@ -53,6 +67,7 @@ func _process(delta: float) -> void:
     production_clock += delta
     customer_clock += delta
     refresh_clock += delta
+    game_seconds += delta
     var changed := false
     var production_seconds := maxf(2.0, 8.0 - float(oven_level - 1) * 2.0)
     var capacity := 30 + (storage_level - 1) * 20
@@ -62,19 +77,32 @@ func _process(delta: float) -> void:
             flour -= 1
             bread += 1
             changed = true
-    while customer_clock >= 5.0:
-        customer_clock -= 5.0
+    var interval := _customer_interval()
+    while customer_clock >= interval:
+        customer_clock -= interval
         if bread > 0:
             bread -= 1
-            cash += BREAD_PRICE
-            sales_revenue += BREAD_PRICE
+            cash += bread_price
+            sales_revenue += bread_price
             customers_served += 1
-            changed = true
+        else:
+            lost_sales += 1
+        changed = true
     if changed:
         _save_game()
     if changed or refresh_clock >= 1.0:
         refresh_clock = 0.0
         _refresh_ui()
+    queue_redraw()
+
+func _population() -> int:
+    return BASE_POPULATION + new_houses.size() * 4
+
+func _customer_interval() -> float:
+    # Higher prices reduce demand, additional homes increase it.
+    var price_effect := pow(float(bread_price) / 5.0, 1.3)
+    var population_effect := 20.0 / float(_population())
+    return clampf(5.0 * price_effect * population_effect, 1.4, 15.0)
 
 func iso(tile: Vector2) -> Vector2:
     return Vector2((tile.x - tile.y) * TILE_W * 0.5, (tile.x + tile.y) * TILE_H * 0.5)
@@ -95,7 +123,7 @@ func _draw() -> void:
             var color := Color("#9bc777") if (x + y) % 2 == 0 else Color("#91bd70")
             if road:
                 color = Color("#a6a8a8")
-            if Vector2i(x, y) == selected_tile and build_mode:
+            if Vector2i(x, y) == selected_tile and (build_mode or house_mode):
                 color = Color("#f6dc76")
             var poly := PackedVector2Array([
                 p + Vector2(0, -TILE_H / 2),
@@ -107,14 +135,23 @@ func _draw() -> void:
             draw_polyline(PackedVector2Array([poly[0], poly[1], poly[2], poly[3], poly[0]]), Color(0.23, 0.36, 0.20, 0.15), 1.0)
             if road and y % 3 == 0:
                 draw_line(p + Vector2(-8, 0), p + Vector2(8, 0), Color("#e8e6c7"), 2)
-    for home in [Vector2i(5, 7), Vector2i(7, 6), Vector2i(18, 8), Vector2i(20, 12), Vector2i(6, 17)]:
+    for home in BASE_HOUSES:
         _draw_building(home, Color("#f2c38e"), Color("#b75d4b"), false)
-    for tree in [Vector2i(4, 4), Vector2i(8, 19), Vector2i(20, 20), Vector2i(3, 15), Vector2i(14, 4)]:
+    for home in new_houses:
+        _draw_building(home, Color("#f2c38e"), Color("#b75d4b"), false)
+    for tree in TREE_TILES:
         var p := iso(Vector2(tree.x, tree.y))
         draw_circle(p + Vector2(0, -18), 13, Color("#448a51"))
         draw_circle(p + Vector2(-6, -24), 9, Color("#62a75c"))
     if bakery_tile.x >= 0:
         _draw_building(bakery_tile, Color("#f7dfaa"), Color("#db8050"), true)
+        # A representative shopper walks toward the bakery on each demand cycle.
+        var progress := clampf(customer_clock / _customer_interval(), 0.0, 1.0)
+        var start_pos := iso(Vector2(7, 6)) + Vector2(0, -9)
+        var shop_pos := iso(Vector2(bakery_tile.x, bakery_tile.y)) + Vector2(31, 9)
+        var shopper := start_pos.lerp(shop_pos, progress)
+        draw_circle(shopper, 8, Color("#465e98"))
+        draw_circle(shopper + Vector2(0, -9), 5, Color("#f6c087"))
     draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 func _draw_building(tile: Vector2i, wall: Color, roof: Color, bakery: bool) -> void:
@@ -160,10 +197,14 @@ func _make_ui() -> void:
     status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     status_label.add_theme_font_size_override("font_size", 17)
     top_box.add_child(status_label)
+    town_label = Label.new()
+    town_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    town_label.add_theme_font_size_override("font_size", 17)
+    top_box.add_child(town_label)
 
     var bottom := PanelContainer.new()
     bottom.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-    bottom.offset_top = -190
+    bottom.offset_top = -255
     root.add_child(bottom)
     var controls := VBoxContainer.new()
     bottom.add_child(controls)
@@ -175,6 +216,10 @@ func _make_ui() -> void:
     build_button.custom_minimum_size = Vector2(0, 70)
     build_button.pressed.connect(_on_build_pressed)
     controls.add_child(build_button)
+    house_button = Button.new()
+    house_button.custom_minimum_size = Vector2(0, 60)
+    house_button.pressed.connect(_on_house_pressed)
+    controls.add_child(house_button)
     reset_button = Button.new()
     reset_button.text = "Start New Town"
     reset_button.custom_minimum_size = Vector2(0, 45)
@@ -188,8 +233,8 @@ func _make_bakery_panel(root: Control) -> void:
     bakery_panel.set_anchors_preset(Control.PRESET_CENTER)
     bakery_panel.offset_left = -290
     bakery_panel.offset_right = 290
-    bakery_panel.offset_top = -290
-    bakery_panel.offset_bottom = 290
+    bakery_panel.offset_top = -350
+    bakery_panel.offset_bottom = 350
     bakery_panel.visible = false
     root.add_child(bakery_panel)
     var content := VBoxContainer.new()
@@ -201,8 +246,20 @@ func _make_bakery_panel(root: Control) -> void:
     heading.add_theme_font_size_override("font_size", 26)
     content.add_child(heading)
     bakery_stats = Label.new()
-    bakery_stats.add_theme_font_size_override("font_size", 20)
+    bakery_stats.add_theme_font_size_override("font_size", 18)
     content.add_child(bakery_stats)
+    var price_row := HBoxContainer.new()
+    content.add_child(price_row)
+    price_down_button = Button.new()
+    price_down_button.text = "Price -$1"
+    price_down_button.custom_minimum_size = Vector2(200, 56)
+    price_down_button.pressed.connect(_price_down)
+    price_row.add_child(price_down_button)
+    price_up_button = Button.new()
+    price_up_button.text = "Price +$1"
+    price_up_button.custom_minimum_size = Vector2(200, 56)
+    price_up_button.pressed.connect(_price_up)
+    price_row.add_child(price_up_button)
     restock_button = Button.new()
     restock_button.text = "Buy 10 flour ($20)"
     restock_button.custom_minimum_size = Vector2(0, 65)
@@ -228,6 +285,12 @@ func _close_dashboard() -> void:
 func _refresh_ui() -> void:
     money_label.text = "Cash: $%d" % cash
     build_button.disabled = false
+    town_label.text = "Population: %d  •  Bread price: $%d" % [_population(), bread_price]
+    house_button.disabled = bakery_tile.x < 0 or (cash < HOUSE_COST and not house_mode)
+    if house_mode:
+        house_button.text = "Confirm House ($120)"
+    else:
+        house_button.text = "Build House ($120)"
     if bakery_tile.x >= 0:
         status_label.text = "Flour: %d  •  Bread: %d  •  Sales: %d" % [flour, bread, customers_served]
         build_button.text = "Open Bakery Dashboard"
@@ -237,10 +300,14 @@ func _refresh_ui() -> void:
     else:
         status_label.text = "Your first business awaits"
         build_button.text = "Build Bakery ($200)"
+    if house_mode:
+        status_label.text = "Tap an empty green tile, then confirm house"
     if bakery_panel != null and bakery_panel.visible:
         var capacity := 30 + (storage_level - 1) * 20
         var speed := maxi(2, 8 - (oven_level - 1) * 2)
-        bakery_stats.text = "Flour: %d | Bread: %d/%d\nOven: 1 bread every %ds\nCustomers: 1 every 5s\nBread selling price: $5\nCustomers served: %d\nSales revenue: $%d\nBusiness spending: $%d\nRevenue minus costs: $%d" % [flour, bread, capacity, speed, customers_served, sales_revenue, business_costs, sales_revenue - business_costs]
+        bakery_stats.text = "Flour %d  |  Bread %d/%d  |  Oven %ds\nBread price $%d  |  1 buyer / %.1fs\nCustomers served %d  |  Missed %d\nSales revenue $%d  |  Costs $%d\nNet after all costs $%d\nAvg sales $%.1f per minute" % [flour, bread, capacity, speed, bread_price, _customer_interval(), customers_served, lost_sales, sales_revenue, business_costs, sales_revenue - business_costs, float(customers_served) * 60.0 / maxf(1.0, game_seconds)]
+        price_down_button.disabled = bread_price <= 2
+        price_up_button.disabled = bread_price >= 12
         restock_button.disabled = cash < 20
         oven_button.text = "Upgrade oven (Lv %d) • $80" % oven_level
         oven_button.disabled = cash < 80 or oven_level >= 4
@@ -250,6 +317,38 @@ func _refresh_ui() -> void:
         storage_button.disabled = cash < 100 or storage_level >= 5
         if storage_level >= 5:
             storage_button.text = "Storage MAX"
+
+func _price_down() -> void:
+    bread_price = maxi(2, bread_price - 1)
+    _save_game()
+    _refresh_ui()
+
+func _price_up() -> void:
+    bread_price = mini(12, bread_price + 1)
+    _save_game()
+    _refresh_ui()
+
+func _on_house_pressed() -> void:
+    if bakery_tile.x < 0:
+        return
+    if not house_mode:
+        house_mode = true
+        build_mode = false
+        selected_tile = Vector2i(12, 11)
+    else:
+        if cash < HOUSE_COST:
+            status_label.text = "Not enough cash for a house"
+            return
+        if not _can_build(selected_tile):
+            status_label.text = "Choose an empty green plot"
+            return
+        new_houses.append(selected_tile)
+        cash -= HOUSE_COST
+        business_costs += HOUSE_COST
+        house_mode = false
+        _save_game()
+    _refresh_ui()
+    queue_redraw()
 
 func _buy_flour() -> void:
     if bakery_tile.x < 0 or cash < 20:
@@ -280,10 +379,12 @@ func _upgrade_storage() -> void:
 
 func _on_build_pressed() -> void:
     if bakery_tile.x >= 0:
+        house_mode = false
         bakery_panel.visible = not bakery_panel.visible
         _refresh_ui()
         return
     if not build_mode:
+        house_mode = false
         build_mode = true
         selected_tile = Vector2i(12, 12)
     else:
@@ -306,9 +407,8 @@ func _can_build(t: Vector2i) -> bool:
         return false
     if t.x == 10 or t.y == 10 or t.x == 16:
         return false
-    for home in [Vector2i(5, 7), Vector2i(7, 6), Vector2i(18, 8), Vector2i(20, 12), Vector2i(6, 17)]:
-        if t == home:
-            return false
+    if t == bakery_tile or t in BASE_HOUSES or t in new_houses or t in TREE_TILES:
+        return false
     return true
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -359,7 +459,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _select_at(pos: Vector2) -> void:
     var t := to_tile(pos)
-    if not build_mode:
+    if not build_mode and not house_mode:
         if bakery_tile.x >= 0 and t == bakery_tile:
             bakery_panel.visible = true
             _refresh_ui()
@@ -371,9 +471,18 @@ func _select_at(pos: Vector2) -> void:
         status_label.text = "Choose an empty green tile"
     queue_redraw()
 
+func _house_save_data() -> Array:
+    var result: Array = []
+    for home in new_houses:
+        result.append([home.x, home.y])
+    return result
+
 func _save_game() -> void:
     var data := {
-        "version": 2,
+        "version": 3,
+        "bread_price": bread_price,
+        "new_houses": _house_save_data(),
+        "lost_sales": lost_sales,
         "cash": cash,
         "bakery_x": bakery_tile.x,
         "bakery_y": bakery_tile.y,
@@ -406,11 +515,26 @@ func _load_game() -> void:
         customers_served = int(data.get("customers_served", 0))
         sales_revenue = int(data.get("sales_revenue", 0))
         business_costs = int(data.get("business_costs", BAKERY_COST if bakery_tile.x >= 0 else 0))
+        bread_price = clampi(int(data.get("bread_price", 5)), 2, 12)
+        lost_sales = int(data.get("lost_sales", 0))
+        new_houses.clear()
+        var saved_houses = data.get("new_houses", [])
+        if saved_houses is Array:
+            for entry in saved_houses:
+                if entry is Array and entry.size() == 2:
+                    var t := Vector2i(int(entry[0]), int(entry[1]))
+                    if _can_build(t):
+                        new_houses.append(t)
 
 func _reset() -> void:
     cash = START_CASH
     bakery_tile = Vector2i(-1, -1)
     build_mode = false
+    house_mode = false
+    new_houses.clear()
+    bread_price = 5
+    lost_sales = 0
+    game_seconds = 0.0
     flour = 20
     bread = 5
     oven_level = 1
