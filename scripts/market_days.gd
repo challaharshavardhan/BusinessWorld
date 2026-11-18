@@ -242,7 +242,8 @@ func _make_market() -> void:
     _text3d(market_root, Vector3(2.5, 0.45, 3.5), "UNLOCK $80", 30)
     unlock_pad = Node3D.new()
     market_root.add_child(unlock_pad)
-    unlock_pad.position = Vector3(3.6, 0, 4)
+    # The eggs are sold from a dedicated table on the opposite side of the shop.
+    unlock_pad.position = shelf_pos[3]
     _build_egg_machine(unlock_pad)
     unlock_pad.visible = machine_unlocked
     _text3d(market_root, Vector3(-1.3, 3, -1.5), "CHECKOUT", 42)
@@ -252,12 +253,64 @@ func _make_market() -> void:
         var cargo := _ball(player, Vector3(-0.38 + float(i % 3) * 0.38, 2.55 + float(i / 3) * 0.38, 0), 0.19, Color("#fff4db"))
         carried_meshes.append(cargo)
     _render_carry()
-    for i in range(2):
-        _person(market_root, Vector3(1.5 + i * 1.45, 0, -3.4), Color("#6bacc2"), true)
+    _text3d(market_root, shelf_pos[3] + Vector3(0, 2.6, 0), "EGG CORNER", 37)
+    _text3d(player, Vector3(0, 3.1, 0), "YOU", 35)
+    for i in range(workers_hired):
+        _spawn_worker(i)
     _update_shelf_labels()
+
+func _spawn_worker(index: int) -> void:
+    var start := Vector3(-0.5 + float(index) * 0.8, 0, 3.4)
+    var npc := _person(market_root, start, Color("#368eb5"), true)
+    _text3d(npc, Vector3(0, 2.9, 0), "STAFF %d" % (index + 1), 30)
+    workers.append(npc)
+
+func _worker_service() -> void:
+    if workers_hired == 0 or customer_queue.is_empty():
+        return
+    var kind: int = int(customer_queue[0]["kind"])
+    if kind == 3 and not machine_unlocked:
+        return
+    if shelf_stock[kind] < 1:
+        return
+    shelf_stock[kind] -= 1
+    var guest: Node3D = customer_queue[0]["node"]
+    guest.queue_free()
+    customer_queue.pop_front()
+    var payment := 12 + kind * 3
+    cash += payment
+    sales += payment
+    served += 1
+    _say("Staff delivered %s: +$%d" % [PRODUCT_NAMES[kind], payment])
+    _update_shelf_labels()
+    _save_game()
+
+func _hire_worker() -> void:
+    var price := 70 + 60 * workers_hired
+    if play_mode != "market" or workers_hired >= 3 or cash < price:
+        return
+    cash -= price
+    workers_hired += 1
+    _spawn_worker(workers_hired - 1)
+    _say("Worker hired! Staff can now serve orders.")
+    _save_game()
+    _refresh_ui()
+
+func _unlock_eggs() -> void:
+    if play_mode != "market" or machine_unlocked or cash < 80:
+        return
+    cash -= 80
+    machine_unlocked = true
+    shelf_stock[3] = 9
+    unlock_pad.visible = true
+    _update_shelf_labels()
+    _say("Egg stall unlocked on the LEFT of the market.")
+    _save_game()
+    _refresh_ui()
 
 func _build_egg_machine(root: Node3D) -> void:
     _box(root, Vector3(0, 0.6, 0), Vector3(2.0, 1.1, 1.5), Color("#7e5945"))
+    _box(root, Vector3(0, 0.09, 0), Vector3(2.6, 0.14, 2.2), Color("#448aa4"))
     _box(root, Vector3(0, 1.18, 0), Vector3(2.0, 0.18, 1.5), Color("#4c8797"))
     for i in range(4):
         _ball(root, Vector3(-0.55 + i * 0.37, 1.42, 0), 0.22, PRODUCT_COLORS[3])
