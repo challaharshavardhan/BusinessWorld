@@ -12,13 +12,27 @@ var cash := 0
 var sales := 0
 var served := 0
 var machine_unlocked := false
+var workers_hired := 0
+var workers: Array[Node3D] = []
+var worker_clock := 0.0
+var game_clock := 0.0
+var camera_zoom_size := 12.5
+var camera_follow := true
+var touch_positions: Dictionary = {}
+var pinch_distance := 0.0
+var hire_button: Button
+var egg_button: Button
+var zoom_in_button: Button
+var zoom_out_button: Button
+var center_button: Button
+var right_controls: VBoxContainer
 var carry_type := -1
 var carry_count := 0
 var capacity := 5
 var shelf_stock: Array[int] = [9, 9, 9, 0]
 var shelf_pos := [
     Vector3(6, 0, -4), Vector3(6, 0, 0), Vector3(6, 0, 4),
-    Vector3(3.5, 0, 4)
+    Vector3(-7.3, 0, 4.5)
 ]
 var customer_queue: Array[Dictionary] = []
 var customer_timer := 0.0
@@ -46,7 +60,7 @@ var joystick_panel: Panel
 var joystick_thumb: Panel
 var product_labels: Array[Label3D] = []
 var carried_meshes: Array[MeshInstance3D] = []
-var saved_player_position := Vector3(-2, 0, 4.0)
+var saved_player_position := Vector3(-2, 0, 5.3)
 var unlock_pad: Node3D
 
 func _ready() -> void:
