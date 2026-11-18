@@ -503,6 +503,9 @@ func _spawn_customer() -> void:
 func _process(delta: float) -> void:
     if play_mode != "market":
         return
+    game_clock += delta
+    worker_clock += delta
+    _frame_market_camera(delta)
     customer_timer += delta
     action_timer += delta
     stock_timer += delta
@@ -522,6 +525,14 @@ func _process(delta: float) -> void:
         player.position.x = clampf(player.position.x, -9.7, 9.7)
         player.position.z = clampf(player.position.z, -6.2, 6.2)
         player.rotation.y = lerp_angle(player.rotation.y, atan2(movement.x, movement.z), minf(delta * 11.0, 1.0))
+    for i in range(workers.size()):
+        var staff: Node3D = workers[i]
+        var cycle := (sin(game_clock * 1.2 + float(i) * 1.7) + 1.0) * 0.5
+        var pickup: Vector3 = shelf_pos[i % 3] + Vector3(-1.5, 0, 0)
+        staff.position = pickup.lerp(Vector3(-1.5, 0, 1.0), cycle)
+    if workers_hired > 0 and worker_clock >= maxf(2.0, 6.0 / float(workers_hired)):
+        worker_clock = 0.0
+        _worker_service()
     if stock_timer >= 2.5:
         stock_timer = 0.0
         for i in range(4):
@@ -535,13 +546,7 @@ func _process(delta: float) -> void:
 
 func _try_interact() -> void:
     if not machine_unlocked and player.position.distance_to(Vector3(2.5, 0, 3.5)) < 1.5 and cash >= 80:
-        cash -= 80
-        machine_unlocked = true
-        shelf_stock[3] = 9
-        unlock_pad.visible = true
-        _say("Egg packer unlocked! New orders are arriving.")
-        _update_shelf_labels()
-        _save_game()
+        _unlock_eggs()
         return
     if carry_count > 0:
         for i in range(4):
@@ -630,6 +635,8 @@ func _save_game() -> void:
     var stored := {
         "cash": cash, "sales": sales, "served": served,
         "machine_unlocked": machine_unlocked,
+        "workers_hired": workers_hired,
+        "camera_zoom_size": camera_zoom_size,
         "carry_type": carry_type, "carry_count": carry_count,
         "stock": shelf_stock,
         "player_x": player.position.x if player != null else -2.0,
@@ -651,6 +658,8 @@ func _load_game() -> void:
         sales = maxi(0, int(data.get("sales", 0)))
         served = maxi(0, int(data.get("served", 0)))
         machine_unlocked = bool(data.get("machine_unlocked", false))
+        workers_hired = clampi(int(data.get("workers_hired", 0)), 0, 3)
+        camera_zoom_size = clampf(float(data.get("camera_zoom_size", 12.5)), 7.5, 22.0)
         carry_type = clampi(int(data.get("carry_type", -1)), -1, 3)
         carry_count = clampi(int(data.get("carry_count", 0)), 0, capacity)
         saved_player_position = Vector3(float(data.get("player_x", -2.0)), 0, float(data.get("player_z", 4.0)))
@@ -664,6 +673,14 @@ func _reset() -> void:
     served = 0
     sales = 0
     machine_unlocked = false
+    workers_hired = 0
+    worker_clock = 0.0
+    game_clock = 0.0
+    for staff in workers:
+        if is_instance_valid(staff):
+            staff.queue_free()
+    workers.clear()
+    camera_zoom_size = 12.5
     carry_type = -1
     carry_count = 0
     shelf_stock = [9, 9, 9, 0]
