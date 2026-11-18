@@ -585,7 +585,7 @@ func _frame_market_camera(delta: float) -> void:
     if player == null or play_mode != "market" or not camera_follow:
         return
     # Follow at an angle, keeping the active avatar in the foreground.
-    var target := player.position * 0.68 + Vector3(0, 0, -1.1)
+    var target := player.position + Vector3(-1.0, 0, -1.1)
     var desired := target + Vector3(15, 19, 18)
     camera.position = camera.position.lerp(desired, clampf(delta * 4.0, 0.0, 1.0))
     camera.look_at(target)
@@ -599,8 +599,8 @@ func _set_mode(target: String) -> void:
     if target == "market":
         camera_zoom_size = clampf(camera_zoom_size, 7.5, 22.0)
         camera.size = camera_zoom_size
-        camera.position = player.position * 0.68 + Vector3(15, 19, 18)
-        camera.look_at(player.position * 0.68 + Vector3(0, 0, -1.1))
+        camera.position = player.position + Vector3(14, 19, 18)
+        camera.look_at(player.position + Vector3(-1.0, 0, -1.1))
         mode_button.text = "Town"
     else:
         camera.position = Vector3(19, 24, 25)
