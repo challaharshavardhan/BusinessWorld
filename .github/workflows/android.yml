@@ -64,14 +64,14 @@ jobs:
         run: godot --headless --editor --path . --import
 
       - name: Check GDScript syntax
-        run: godot --headless --path . --check-only --script res://scripts/main.gd
+        run: godot --headless --path . --check-only --script res://scripts/market_days.gd
 
       - name: Export APK
-        run: godot --headless --path . --export-debug "Android" build/BusinessWorld-debug.apk
+        run: godot --headless --path . --export-debug "Android" build/MarketDays-debug.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: MarketDays-3D-v1
-          path: build/BusinessWorld-debug.apk
+          path: build/MarketDays-debug.apk
           if-no-files-found: error
