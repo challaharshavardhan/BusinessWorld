@@ -1,34 +1,23 @@
-# Business World — Green Valley (v0.3)
+# Supply Yard — Mobile Delivery Game (Prototype)
 
-An Android-first offline isometric tycoon built with Godot 4.4.
+This is a completely original single-screen casual delivery game inspired by the layout and gameplay genre of a screenshot provided by the user. It does **not** use Township artwork, logos, names, meshes, textures, sprites, or game code.
 
-## What's new in v0.3
-- **Visible shopper:** a representative animated customer walks from a house toward the bakery each simulated purchase cycle
-- **Dynamic bakery demand:** visit interval depends on bread price and town population
-- **Bread pricing:** adjust prices between $2 and $12 in the bakery dashboard; higher prices slow customer arrivals
-- **Houses and population:** build houses for $120. Each new house increases town population by four, bringing more customers
-- **Business analytics:** cumulative revenue, costs, net after costs, customers served, missed sales, and average served customers per minute
-- **Cleaner dashboard:** compact statistics with price and upgrade controls
+## Gameplay
+- Hold and drag a finger to move the character.
+- Approach the **egg stack** at the blue collection zone to automatically pick up eggs.
+- Approach the **truck** at the yellow delivery zone to load the order.
+- Deliver the full requested quantity to earn $7 per egg.
+- Walk onto the green **cash upgrade pad** when you have enough money to increase egg production.
+- Eggs are produced automatically. Carry at most six; the stack holds at most 36.
+- Restart begins a fresh prototype game.
+- Save data is stored locally in a new file; the prior Business World save is not altered.
 
-## Existing v0.2 gameplay
-- Begin with $500, construct a bakery for $200
-- Bakery starts with 20 flour and 5 bread
-- Production starts at one bread every 8 seconds, uses one flour per bread; default capacity 30
-- Buy 10 flour for $20
-- Upgrade oven for $80 (up to level 4) and storage for $100 (up to level 5)
-- Pan and zoom the isometric town and use **Start New Town** to reset
+## Build Android APK
+Open **Actions** → **Build Android APK** → latest successful workflow run.
+Download **SupplyYard-Pivot-v1**, extract the zip, and install the debug APK on Android.
 
-## How to play
-1. Build the bakery on an empty green tile.
-2. Tap **Open Bakery Dashboard** to review inventory and adjust bread prices.
-3. Observe the customer's walking marker approaching the bakery and watch sales accumulate.
-4. Use **Build House ($120)**, select an empty green tile, and confirm construction. Each house grows population by four.
-5. Watch the displayed buyer interval change when you raise/lower the price or build houses.
-6. Restock flour and upgrade the bakery to keep up with demand.
+## Prior project
+The original bakery tycoon v0.3 is preserved on the branch `archive/business-world-v0.3`.
 
-## Build and install
-Open GitHub **Actions** → **Build Android APK**, open the latest successful run and download the `BusinessWorld-Android-v0.3` artifact. Extract the APK and install it on your Android phone.
-
-**Data:** Loads existing v0.1/v0.2 save files from the same path; new properties have defaults. If Android forces you to uninstall a differently signed debug APK, uninstalling deletes your local save.
-
-**Scope:** This is a prototype. The shopper is a visual representative, not an individually pathfinding customer. The demand model uses fixed price elasticity; business costs include construction and upgrades and do not yet include staffing, rent, or daily wages. In-game time advances only while the app is running.
+## Scope and limitations
+Visuals are original geometry rendered from Godot drawing commands as a placeholder for future authored 3D/2.5D art assets. There are no ripped game assets. The truck animation and character are intentionally lightweight. App upgrades may require reinstalling if CI debug signing changes; uninstalling deletes app data.
