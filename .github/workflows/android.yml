@@ -66,6 +66,18 @@ jobs:
       - name: Check GDScript syntax
         run: godot --headless --path . --check-only --script res://scripts/market_days.gd
 
+      - name: Smoke-test game startup
+        run: |
+          godot --headless --path . --quit-after 45 > /tmp/market-smoke.log 2>&1 || {
+            cat /tmp/market-smoke.log
+            exit 1
+          }
+          cat /tmp/market-smoke.log
+          if grep -qE "SCRIPT ERROR:|SCRIPT ERROR|Failed to load script|Invalid call" /tmp/market-smoke.log; then
+            echo "Game startup smoke test failed"
+            exit 1
+          fi
+
       - name: Export APK
         run: godot --headless --path . --export-debug "Android" build/MarketDays-debug.apk
 
