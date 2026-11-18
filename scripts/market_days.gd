@@ -362,6 +362,38 @@ func _make_ui() -> void:
     reset_button.custom_minimum_size = Vector2(125, 70)
     reset_button.pressed.connect(_reset)
     row.add_child(reset_button)
+    # Actions stay visible on the right instead of hiding in the scene.
+    right_controls = VBoxContainer.new()
+    right_controls.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+    right_controls.offset_left = -192
+    right_controls.offset_right = -10
+    right_controls.offset_top = 100
+    right_controls.offset_bottom = 440
+    right_controls.add_theme_constant_override("separation", 6)
+    root.add_child(right_controls)
+    hire_button = Button.new()
+    hire_button.custom_minimum_size = Vector2(180, 54)
+    hire_button.pressed.connect(_hire_worker)
+    right_controls.add_child(hire_button)
+    egg_button = Button.new()
+    egg_button.custom_minimum_size = Vector2(180, 54)
+    egg_button.pressed.connect(_unlock_eggs)
+    right_controls.add_child(egg_button)
+    zoom_in_button = Button.new()
+    zoom_in_button.text = "ZOOM +"
+    zoom_in_button.custom_minimum_size = Vector2(180, 54)
+    zoom_in_button.pressed.connect(func() -> void: _set_zoom(camera_zoom_size - 1.5))
+    right_controls.add_child(zoom_in_button)
+    zoom_out_button = Button.new()
+    zoom_out_button.text = "ZOOM -"
+    zoom_out_button.custom_minimum_size = Vector2(180, 54)
+    zoom_out_button.pressed.connect(func() -> void: _set_zoom(camera_zoom_size + 1.5))
+    right_controls.add_child(zoom_out_button)
+    center_button = Button.new()
+    center_button.text = "FOCUS PLAYER"
+    center_button.custom_minimum_size = Vector2(180, 54)
+    center_button.pressed.connect(_focus_player)
+    right_controls.add_child(center_button)
     var bottom := PanelContainer.new()
     bottom.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
     bottom.offset_top = -65
@@ -389,15 +421,36 @@ func _make_ui() -> void:
     thumb_style.set_corner_radius_all(50)
     joystick_thumb.add_theme_stylebox_override("panel", thumb_style)
 
+func _set_zoom(new_size: float) -> void:
+    camera_zoom_size = clampf(new_size, 7.5, 22.0)
+    if play_mode == "market":
+        camera.size = camera_zoom_size
+    _save_game()
+
+func _focus_player() -> void:
+    camera_follow = true
+    _frame_market_camera(1.0)
+
+func _frame_market_camera(delta: float) -> void:
+    if player == null or play_mode != "market" or not camera_follow:
+        return
+    # Follow at an angle, keeping the active avatar in the foreground.
+    var target := player.position * 0.68 + Vector3(0, 0, -1.1)
+    var desired := target + Vector3(15, 19, 18)
+    camera.position = camera.position.lerp(desired, clampf(delta * 4.0, 0.0, 1.0))
+    camera.look_at(target)
+
 func _set_mode(target: String) -> void:
     play_mode = target
     market_root.visible = target == "market"
     town_root.visible = target == "town"
     joystick_panel.visible = target == "market"
+    right_controls.visible = target == "market"
     if target == "market":
-        camera.position = Vector3(15, 19, 18)
-        camera.size = 17.0
-        camera.look_at(Vector3(0, 0, 0))
+        camera_zoom_size = clampf(camera_zoom_size, 7.5, 22.0)
+        camera.size = camera_zoom_size
+        camera.position = player.position * 0.68 + Vector3(15, 19, 18)
+        camera.look_at(player.position * 0.68 + Vector3(0, 0, -1.1))
         mode_button.text = "Town"
     else:
         camera.position = Vector3(19, 24, 25)
@@ -418,7 +471,12 @@ func _refresh_ui() -> void:
         detail.text = "Town overview • Visit your market"
         tip.text = "Tap ENTER MARKET to play the market management game."
         return
-    headline.text = "CASH  $%d    •    SERVED  %d" % [cash, served]
+    headline.text = "CASH $%d  •  SERVED %d  •  STAFF %d" % [cash, served, workers_hired]
+    if hire_button != null:
+        hire_button.disabled = workers_hired >= 3 or cash < 70 + 60 * workers_hired
+        hire_button.text = "STAFF MAX" if workers_hired >= 3 else "HIRE $%d" % (70 + 60 * workers_hired)
+        egg_button.disabled = machine_unlocked or cash < 80
+        egg_button.text = "EGGS READY" if machine_unlocked else "EGG STALL $80"
     if customer_queue.size() > 0:
         var wanted: int = int(customer_queue[0]["kind"])
         detail.text = "NEXT: %s   |   Carry: %s %d/%d" % [PRODUCT_NAMES[wanted], PRODUCT_NAMES[carry_type] if carry_type >= 0 else "None", carry_count, capacity]
