@@ -287,7 +287,10 @@ func _worker_service() -> void:
 
 func _hire_worker() -> void:
     var price := 70 + 60 * workers_hired
-    if play_mode != "market" or workers_hired >= 3 or cash < price:
+    if play_mode != "market" or workers_hired >= 3:
+        return
+    if cash < price:
+        _say("Earn $%d more at checkout to hire your worker." % (price - cash))
         return
     cash -= price
     workers_hired += 1
@@ -297,7 +300,10 @@ func _hire_worker() -> void:
     _refresh_ui()
 
 func _unlock_eggs() -> void:
-    if play_mode != "market" or machine_unlocked or cash < 80:
+    if play_mode != "market" or machine_unlocked:
+        return
+    if cash < 80:
+        _say("Earn $%d more to unlock the egg stall." % (80 - cash))
         return
     cash -= 80
     machine_unlocked = true
@@ -474,9 +480,9 @@ func _refresh_ui() -> void:
         return
     headline.text = "CASH $%d  •  SERVED %d  •  STAFF %d" % [cash, served, workers_hired]
     if hire_button != null:
-        hire_button.disabled = workers_hired >= 3 or cash < 70 + 60 * workers_hired
+        hire_button.disabled = workers_hired >= 3
         hire_button.text = "STAFF MAX" if workers_hired >= 3 else "HIRE $%d" % (70 + 60 * workers_hired)
-        egg_button.disabled = machine_unlocked or cash < 80
+        egg_button.disabled = machine_unlocked
         egg_button.text = "EGGS READY" if machine_unlocked else "EGG STALL $80"
     if customer_queue.size() > 0:
         var wanted: int = int(customer_queue[0]["kind"])
@@ -486,7 +492,7 @@ func _refresh_ui() -> void:
     if toast_timer > 0.0:
         tip.text = floating_message
     elif not machine_unlocked:
-        tip.text = "Collect produce on the right • Serve at checkout • Unlock egg packer for $80"
+        tip.text = "Serve customers to earn cash • HIRE STAFF $70 • EGG STALL $80"
     else:
         tip.text = "Collect stock • Serve waiting customers • Keep growing your shop"
 
