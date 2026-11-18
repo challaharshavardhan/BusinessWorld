@@ -1,23 +1,30 @@
-# Supply Yard — Mobile Delivery Game (Prototype)
+# Market Days — 3D market recreation prototype
 
-This is a completely original single-screen casual delivery game inspired by the layout and gameplay genre of a screenshot provided by the user. It does **not** use Township artwork, logos, names, meshes, textures, sprites, or game code.
+An original Android game prototype based on the **gameplay demonstrated in the user-provided recording**. This is an independent implementation with procedural 3D models and **no Township logo, branding, art assets, or game code**.
 
-## Gameplay
-- Hold and drag a finger to move the character.
-- Approach the **egg stack** at the blue collection zone to automatically pick up eggs.
-- Approach the **truck** at the yellow delivery zone to load the order.
-- Deliver the full requested quantity to earn $7 per egg.
-- Walk onto the green **cash upgrade pad** when you have enough money to increase egg production.
-- Eggs are produced automatically. Carry at most six; the stack holds at most 36.
-- Restart begins a fresh prototype game.
-- Save data is stored locally in a new file; the prior Business World save is not altered.
+## What the recording shows
 
-## Build Android APK
-Open **Actions** → **Build Android APK** → latest successful workflow run.
-Download **SupplyYard-Pivot-v1**, extract the zip, and install the debug APK on Android.
+- Isometric town exterior with fields, houses, roads and production buildings (early section).
+- A close-up market minigame (from approximately 1:20): the player moves with a touch joystick, visits produce shelves, operates a checkout, serves customers, gathers cash and unlocks new equipment.
 
-## Prior project
-The original bakery tycoon v0.3 is preserved on the branch `archive/business-world-v0.3`.
+## What this version reproduces
 
-## Scope and limitations
-Visuals are original geometry rendered from Godot drawing commands as a placeholder for future authored 3D/2.5D art assets. There are no ripped game assets. The truck animation and character are intentionally lightweight. App upgrades may require reinstalling if CI debug signing changes; uninstalling deletes app data.
+- Orthographic/isometric 3D town and an **Enter Market** button.
+- Isometric market interior with fences, shelves, register, colorful vegetables, staff, walking customers and an animated player.
+- Touch drag/joystick movement (use lower-left region).
+- Collect stock from shelves by walking close to them.
+- Deliver produce at the counter that matches the next customer's request; receive money.
+- Restocking over time; customer queue and order bubbles.
+- $80 upgrade pad to unlock an egg-packing machine and egg requests.
+- HUD for cash, customers served, product requested and carried stock.
+- Offline save, restart, and a town/market switch.
+
+## Install
+
+On Android, open the **Actions** tab and select a successful **Build Android APK** workflow run.
+Download the **MarketDays-3D-v1** artifact, extract the ZIP, and install the APK.
+This game runs landscape to match the actual recording. The old portrait Supply Yard version is preserved on `archive/supply-yard-pivot-v1`, and the old bakery tycoon is on `archive/business-world-v0.3`.
+
+## Limitations
+
+This is a first playable **recreation of the demonstrated mechanics**, not a complete clone of Township. It does not contain the original game's full town, objectives, graphics, cinematic animations, or proprietary assets. Characters and equipment are procedurally assembled low-poly primitives pending more detailed independently created art. There are no online accounts or ads.
