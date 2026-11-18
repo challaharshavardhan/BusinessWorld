@@ -10,6 +10,10 @@ const PRODUCT_COLORS := [
 
 var cash := 0
 var sales := 0
+var pending_cash := 0
+var cash_stack_root: Node3D
+var cash_stack_label: Label3D
+var flying_cash: Array[Dictionary] = []
 var served := 0
 var machine_unlocked := false
 var workers_hired := 0
@@ -242,6 +246,11 @@ func _make_market() -> void:
     _text3d(market_root, Vector3(-2.4, 2.3, 5.65), "EXPRESS CHECKOUT", 33)
     _box(market_root, Vector3(-5.0, 0.05, 0.1), Vector3(1.8, 0.07, 1.2), Color("#49917f"))
     _text3d(market_root, Vector3(-5.0, 0.45, 0.1), "$ CASH", 28)
+    cash_stack_root = Node3D.new()
+    market_root.add_child(cash_stack_root)
+    cash_stack_root.position = Vector3(-5.0, 0.17, 0.1)
+    cash_stack_label = _text3d(market_root, Vector3(-5.0, 2.3, 0.1), "COLLECT CASH", 30)
+    _update_cash_stack()
     _box(market_root, Vector3(2.5, 0.035, 3.5), Vector3(2.2, 0.06, 2.2), Color("#389fb4"))
     _box(market_root, Vector3(2.5, 0.08, 3.5), Vector3(1.85, 0.1, 1.85), Color("#77c858"))
     _text3d(market_root, Vector3(2.5, 0.45, 3.5), "UNLOCK $80", 30)
@@ -270,6 +279,46 @@ func _spawn_worker(index: int) -> void:
     _text3d(npc, Vector3(0, 2.9, 0), "STAFF %d" % (index + 1), 30)
     workers.append(npc)
 
+# Cash received from sales becomes a visible pile of green banknotes.
+# It stays in the market until the player walks to the cash collection mat.
+func _update_cash_stack() -> void:
+    if cash_stack_root == null:
+        return
+    for child in cash_stack_root.get_children():
+        child.queue_free()
+    cash_stack_root.visible = pending_cash > 0
+    if cash_stack_label != null:
+        cash_stack_label.text = "PICK UP $%d" % pending_cash if pending_cash > 0 else "CASH COLLECTION"
+    var layers := mini(12, maxi(1, ceili(float(pending_cash) / 14.0)))
+    if pending_cash <= 0:
+        return
+    for i in range(layers):
+        var y: float = float(i) * 0.095
+        var bill := _box(cash_stack_root, Vector3(0, y, 0), Vector3(1.02, 0.075, 0.48), Color("#4fc97c"))
+        bill.rotation.y = sin(float(i) * 0.9) * 0.12
+        _box(cash_stack_root, Vector3(0, y + 0.042, 0), Vector3(0.28, 0.014, 0.46), Color("#e9eeb7"))
+    _box(cash_stack_root, Vector3(0, float(layers) * 0.095, 0), Vector3(0.6, 0.035, 0.22), Color("#f1ffdf"))
+
+func _cash_payment(amount: int, origin: Vector3) -> void:
+    pending_cash += amount
+    var flyer := Node3D.new()
+    market_root.add_child(flyer)
+    flyer.position = origin + Vector3(0, 2.3, 0)
+    _box(flyer, Vector3.ZERO, Vector3(0.85, 0.07, 0.42), Color("#48e77f"))
+    _text3d(flyer, Vector3(0, 0.45, 0), "+$%d" % amount, 43)
+    flying_cash.append({"node": flyer, "origin": flyer.position, "time": 0.0})
+    _update_cash_stack()
+    _save_game()
+
+func _collect_cash() -> void:
+    if pending_cash <= 0:
+        return
+    cash += pending_cash
+    _say("Collected $%d from the cash pile!" % pending_cash)
+    pending_cash = 0
+    _update_cash_stack()
+    _save_game()
+
 func _worker_service() -> void:
     if workers_hired == 0 or customer_queue.is_empty():
         return
@@ -283,7 +332,7 @@ func _worker_service() -> void:
     guest.queue_free()
     customer_queue.pop_front()
     var payment := 12 + kind * 3
-    cash += payment
+    _cash_payment(payment, Vector3(-2.3, 0, -0.9))
     sales += payment
     served += 1
     _say("Staff delivered %s: +$%d" % [PRODUCT_NAMES[kind], payment])
@@ -483,7 +532,7 @@ func _refresh_ui() -> void:
         detail.text = "Town overview • Visit your market"
         tip.text = "Tap ENTER MARKET to play the market management game."
         return
-    headline.text = "CASH $%d  •  SERVED %d  •  STAFF %d" % [cash, served, workers_hired]
+    headline.text = "WALLET $%d  •  PICKUP $%d  •  SERVED %d" % [cash, pending_cash, served]
     if hire_button != null:
         hire_button.disabled = workers_hired >= 3
         hire_button.text = "STAFF MAX" if workers_hired >= 3 else "HIRE $%d" % (70 + 60 * workers_hired)
@@ -517,6 +566,19 @@ func _process(delta: float) -> void:
         return
     game_clock += delta
     worker_clock += delta
+    for i in range(flying_cash.size() - 1, -1, -1):
+        var effect: Dictionary = flying_cash[i]
+        effect["time"] = float(effect["time"]) + delta
+        var motion: Node3D = effect["node"]
+        if not is_instance_valid(motion):
+            flying_cash.remove_at(i)
+            continue
+        var age: float = float(effect["time"])
+        motion.position = (effect["origin"] as Vector3) + Vector3(0, age * 1.5, 0)
+        motion.scale = Vector3.ONE * maxf(0.2, 1.0 - maxf(age - 0.5, 0.0))
+        if age >= 1.45:
+            motion.queue_free()
+            flying_cash.remove_at(i)
     _frame_market_camera(delta)
     customer_timer += delta
     action_timer += delta
@@ -557,6 +619,9 @@ func _process(delta: float) -> void:
     _refresh_ui()
 
 func _try_interact() -> void:
+    if pending_cash > 0 and player.position.distance_to(Vector3(-5.0, 0, 0.1)) < 1.65:
+        _collect_cash()
+        return
     if not machine_unlocked and player.position.distance_to(Vector3(2.5, 0, 3.5)) < 1.5 and cash >= 80:
         _unlock_eggs()
         return
@@ -605,7 +670,7 @@ func _try_interact() -> void:
             customer.queue_free()
             customer_queue.pop_front()
             carry_count -= 1
-            cash += 12 + kind * 3
+            _cash_payment(12 + kind * 3, Vector3(-2.4, 0, 5.65) if at_express_checkout else Vector3(-2.3, 0, -0.9))
             sales += 12 + kind * 3
             served += 1
             if carry_count == 0:
@@ -674,6 +739,7 @@ func _input(event: InputEvent) -> void:
 func _save_game() -> void:
     var stored := {
         "cash": cash, "sales": sales, "served": served,
+        "pending_cash": pending_cash,
         "machine_unlocked": machine_unlocked,
         "workers_hired": workers_hired,
         "camera_zoom_size": camera_zoom_size,
@@ -695,6 +761,7 @@ func _load_game() -> void:
     var data = JSON.parse_string(file.get_as_text())
     if data is Dictionary:
         cash = maxi(0, int(data.get("cash", 0)))
+        pending_cash = maxi(0, int(data.get("pending_cash", 0)))
         sales = maxi(0, int(data.get("sales", 0)))
         served = maxi(0, int(data.get("served", 0)))
         machine_unlocked = bool(data.get("machine_unlocked", false))
@@ -710,6 +777,13 @@ func _load_game() -> void:
 
 func _reset() -> void:
     cash = 0
+    pending_cash = 0
+    for effect in flying_cash:
+        var moving: Node3D = effect["node"]
+        if is_instance_valid(moving):
+            moving.queue_free()
+    flying_cash.clear()
+    _update_cash_stack()
     served = 0
     sales = 0
     machine_unlocked = false
