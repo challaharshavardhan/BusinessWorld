@@ -1,33 +1,34 @@
-# Business World — Green Valley (v0.2)
+# Business World — Green Valley (v0.3)
 
-An offline-first isometric Android business tycoon built using Godot 4.4.
+An Android-first offline isometric tycoon built with Godot 4.4.
 
-## Playable features
+## What's new in v0.3
+- **Visible shopper:** a representative animated customer walks from a house toward the bakery each simulated purchase cycle
+- **Dynamic bakery demand:** visit interval depends on bread price and town population
+- **Bread pricing:** adjust prices between $2 and $12 in the bakery dashboard; higher prices slow customer arrivals
+- **Houses and population:** build houses for $120. Each new house increases town population by four, bringing more customers
+- **Business analytics:** cumulative revenue, costs, net after costs, customers served, missed sales, and average served customers per minute
+- **Cleaner dashboard:** compact statistics with price and upgrade controls
 
-- A 24x24 isometric town with roads, trees and houses
-- Drag to pan and pinch to zoom
-- Start with $500; build a bakery for $200
-- After building, tap **Open Bakery Dashboard** or tap the bakery tile
-- Automatic baking: one bread every 8 seconds using one flour; initial flour = 20 and bread = 5
-- One customer purchases a bread every 5 seconds when bread is in stock; bread sells for $5
-- Buy 10 flour for $20 in the dashboard
-- Oven upgrade costs $80, up to level 4; each upgrade reduces bake time by two seconds (minimum two seconds)
-- Storage upgrade costs $100, up to level 5; each upgrade adds 20 bread capacity above the starting 30
-- Revenue, spending, inventory and customer count recorded in local save
-- **Start New Town** resets the bakery and its economy
+## Existing v0.2 gameplay
+- Begin with $500, construct a bakery for $200
+- Bakery starts with 20 flour and 5 bread
+- Production starts at one bread every 8 seconds, uses one flour per bread; default capacity 30
+- Buy 10 flour for $20
+- Upgrade oven for $80 (up to level 4) and storage for $100 (up to level 5)
+- Pan and zoom the isometric town and use **Start New Town** to reset
 
-## Android APK
+## How to play
+1. Build the bakery on an empty green tile.
+2. Tap **Open Bakery Dashboard** to review inventory and adjust bread prices.
+3. Observe the customer's walking marker approaching the bakery and watch sales accumulate.
+4. Use **Build House ($120)**, select an empty green tile, and confirm construction. Each house grows population by four.
+5. Watch the displayed buyer interval change when you raise/lower the price or build houses.
+6. Restock flour and upgrade the bakery to keep up with demand.
 
-1. Open **Actions** in the GitHub repository and open **Build Android APK**.
-2. Open a successful run; download the `BusinessWorld-Android-v0.2` artifact.
-3. Extract the ZIP file and install the APK. This is a debug build.
+## Build and install
+Open GitHub **Actions** → **Build Android APK**, open the latest successful run and download the `BusinessWorld-Android-v0.3` artifact. Extract the APK and install it on your Android phone.
 
-**Existing saves:** The game loads the v0.1 save path and adds v0.2 fields with defaults. Reinstalling over the existing app generally retains the save if the debug signing key is compatible. If Android requires uninstalling, uninstalling erases app data and saved town.
+**Data:** Loads existing v0.1/v0.2 save files from the same path; new properties have defaults. If Android forces you to uninstall a differently signed debug APK, uninstalling deletes your local save.
 
-## Gameplay notes
-
-Sales and production advance only while the game is running (no offline earnings yet). Customers currently act as an aggregate demand simulation, not walking characters. Revenue and spending figures are cumulative since the town started; the latter includes construction, restocking and upgrades. Revenue minus these costs is a cumulative accounting metric, not current cash.
-
-## Planned
-
-Walking shoppers, dynamic prices and demand, business staffing, other businesses, and district expansion.
+**Scope:** This is a prototype. The shopper is a visual representative, not an individually pathfinding customer. The demand model uses fixed price elasticity; business costs include construction and upgrades and do not yet include staffing, rent, or daily wages. In-game time advances only while the app is running.
