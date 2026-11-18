@@ -406,6 +406,27 @@ func _try_interact() -> void:
         _update_shelf_labels()
         _save_game()
         return
+    if carry_count > 0:
+        for i in range(4):
+            if i == 3 and not machine_unlocked:
+                continue
+            if player.position.distance_to(shelf_pos[i]) < 2.0:
+                if carry_type != i and shelf_stock[i] > 0:
+                    shelf_stock[carry_type] = mini(16, shelf_stock[carry_type] + carry_count)
+                    carry_type = i
+                    carry_count = mini(capacity, shelf_stock[i])
+                    shelf_stock[i] -= carry_count
+                    _say("Switched to %s" % PRODUCT_NAMES[i])
+                    _update_shelf_labels()
+                    _save_game()
+                    return
+                elif carry_type == i and carry_count < capacity and shelf_stock[i] > 0:
+                    var amount := mini(capacity - carry_count, shelf_stock[i])
+                    carry_count += amount
+                    shelf_stock[i] -= amount
+                    _update_shelf_labels()
+                    _save_game()
+                    return
     if carry_count == 0:
         for i in range(4):
             if i == 3 and not machine_unlocked:
