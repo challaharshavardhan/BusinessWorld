@@ -6,6 +6,23 @@ const TILE_H := 46.0
 const SAVE_PATH := "user://business_world_v01.json"
 const BAKERY_COST := 200
 const START_CASH := 500
+const BREAD_PRICE := 5
+var flour := 20
+var bread := 5
+var oven_level := 1
+var storage_level := 1
+var customers_served := 0
+var sales_revenue := 0
+var business_costs := 0
+var production_clock := 0.0
+var customer_clock := 0.0
+var refresh_clock := 0.0
+var bakery_panel: PanelContainer
+var bakery_stats: Label
+var restock_button: Button
+var oven_button: Button
+var storage_button: Button
+
 
 var cash := START_CASH
 var bakery_tile := Vector2i(-1, -1)
@@ -29,6 +46,35 @@ func _ready() -> void:
     _load_game()
     _make_ui()
     queue_redraw()
+
+func _process(delta: float) -> void:
+    if bakery_tile.x < 0:
+        return
+    production_clock += delta
+    customer_clock += delta
+    refresh_clock += delta
+    var changed := false
+    var production_seconds := maxf(2.0, 8.0 - float(oven_level - 1) * 2.0)
+    var capacity := 30 + (storage_level - 1) * 20
+    while production_clock >= production_seconds:
+        production_clock -= production_seconds
+        if flour > 0 and bread < capacity:
+            flour -= 1
+            bread += 1
+            changed = true
+    while customer_clock >= 5.0:
+        customer_clock -= 5.0
+        if bread > 0:
+            bread -= 1
+            cash += BREAD_PRICE
+            sales_revenue += BREAD_PRICE
+            customers_served += 1
+            changed = true
+    if changed:
+        _save_game()
+    if changed or refresh_clock >= 1.0:
+        refresh_clock = 0.0
+        _refresh_ui()
 
 func iso(tile: Vector2) -> Vector2:
     return Vector2((tile.x - tile.y) * TILE_W * 0.5, (tile.x + tile.y) * TILE_H * 0.5)
@@ -134,24 +180,108 @@ func _make_ui() -> void:
     reset_button.custom_minimum_size = Vector2(0, 45)
     reset_button.pressed.connect(_reset)
     controls.add_child(reset_button)
+    _make_bakery_panel(root)
     _refresh_ui()
+
+func _make_bakery_panel(root: Control) -> void:
+    bakery_panel = PanelContainer.new()
+    bakery_panel.set_anchors_preset(Control.PRESET_CENTER)
+    bakery_panel.offset_left = -290
+    bakery_panel.offset_right = 290
+    bakery_panel.offset_top = -290
+    bakery_panel.offset_bottom = 290
+    bakery_panel.visible = false
+    root.add_child(bakery_panel)
+    var content := VBoxContainer.new()
+    content.add_theme_constant_override("separation", 12)
+    bakery_panel.add_child(content)
+    var heading := Label.new()
+    heading.text = "BAKERY DASHBOARD"
+    heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    heading.add_theme_font_size_override("font_size", 26)
+    content.add_child(heading)
+    bakery_stats = Label.new()
+    bakery_stats.add_theme_font_size_override("font_size", 20)
+    content.add_child(bakery_stats)
+    restock_button = Button.new()
+    restock_button.text = "Buy 10 flour ($20)"
+    restock_button.custom_minimum_size = Vector2(0, 65)
+    restock_button.pressed.connect(_buy_flour)
+    content.add_child(restock_button)
+    oven_button = Button.new()
+    oven_button.custom_minimum_size = Vector2(0, 65)
+    oven_button.pressed.connect(_upgrade_oven)
+    content.add_child(oven_button)
+    storage_button = Button.new()
+    storage_button.custom_minimum_size = Vector2(0, 65)
+    storage_button.pressed.connect(_upgrade_storage)
+    content.add_child(storage_button)
+    var close_button := Button.new()
+    close_button.text = "Close"
+    close_button.custom_minimum_size = Vector2(0, 60)
+    close_button.pressed.connect(_close_dashboard)
+    content.add_child(close_button)
+
+func _close_dashboard() -> void:
+    bakery_panel.visible = false
 
 func _refresh_ui() -> void:
     money_label.text = "Cash: $%d" % cash
-    build_button.disabled = bakery_tile.x >= 0
+    build_button.disabled = false
     if bakery_tile.x >= 0:
-        status_label.text = "Bakery built! Next: customers and sales"
-        build_button.text = "Bakery constructed ✓"
-        build_button.disabled = true
+        status_label.text = "Flour: %d  •  Bread: %d  •  Sales: %d" % [flour, bread, customers_served]
+        build_button.text = "Open Bakery Dashboard"
     elif build_mode:
         status_label.text = "Select a green tile, then confirm"
         build_button.text = "Confirm Bakery ($200)"
     else:
         status_label.text = "Your first business awaits"
         build_button.text = "Build Bakery ($200)"
+    if bakery_panel != null and bakery_panel.visible:
+        var capacity := 30 + (storage_level - 1) * 20
+        var speed := maxi(2, 8 - (oven_level - 1) * 2)
+        bakery_stats.text = "Flour: %d | Bread: %d/%d\nOven: 1 bread every %ds\nCustomers: 1 every 5s\nBread selling price: $5\nCustomers served: %d\nSales revenue: $%d\nBusiness spending: $%d\nRevenue minus costs: $%d" % [flour, bread, capacity, speed, customers_served, sales_revenue, business_costs, sales_revenue - business_costs]
+        restock_button.disabled = cash < 20
+        oven_button.text = "Upgrade oven (Lv %d) • $80" % oven_level
+        oven_button.disabled = cash < 80 or oven_level >= 4
+        if oven_level >= 4:
+            oven_button.text = "Oven MAX"
+        storage_button.text = "Upgrade storage (Lv %d) • $100" % storage_level
+        storage_button.disabled = cash < 100 or storage_level >= 5
+        if storage_level >= 5:
+            storage_button.text = "Storage MAX"
+
+func _buy_flour() -> void:
+    if bakery_tile.x < 0 or cash < 20:
+        return
+    cash -= 20
+    business_costs += 20
+    flour += 10
+    _save_game()
+    _refresh_ui()
+
+func _upgrade_oven() -> void:
+    if bakery_tile.x < 0 or cash < 80 or oven_level >= 4:
+        return
+    cash -= 80
+    business_costs += 80
+    oven_level += 1
+    _save_game()
+    _refresh_ui()
+
+func _upgrade_storage() -> void:
+    if bakery_tile.x < 0 or cash < 100 or storage_level >= 5:
+        return
+    cash -= 100
+    business_costs += 100
+    storage_level += 1
+    _save_game()
+    _refresh_ui()
 
 func _on_build_pressed() -> void:
     if bakery_tile.x >= 0:
+        bakery_panel.visible = not bakery_panel.visible
+        _refresh_ui()
         return
     if not build_mode:
         build_mode = true
@@ -165,6 +295,7 @@ func _on_build_pressed() -> void:
             return
         bakery_tile = selected_tile
         cash -= BAKERY_COST
+        business_costs += BAKERY_COST
         build_mode = false
         _save_game()
     _refresh_ui()
@@ -227,9 +358,12 @@ func _unhandled_input(event: InputEvent) -> void:
         last_touch = event.position
 
 func _select_at(pos: Vector2) -> void:
-    if not build_mode:
-        return
     var t := to_tile(pos)
+    if not build_mode:
+        if bakery_tile.x >= 0 and t == bakery_tile:
+            bakery_panel.visible = true
+            _refresh_ui()
+        return
     if _can_build(t):
         selected_tile = t
         status_label.text = "Plot selected (%d, %d)" % [t.x, t.y]
@@ -239,10 +373,17 @@ func _select_at(pos: Vector2) -> void:
 
 func _save_game() -> void:
     var data := {
-        "version": 1,
+        "version": 2,
         "cash": cash,
         "bakery_x": bakery_tile.x,
-        "bakery_y": bakery_tile.y
+        "bakery_y": bakery_tile.y,
+        "flour": flour,
+        "bread": bread,
+        "oven_level": oven_level,
+        "storage_level": storage_level,
+        "customers_served": customers_served,
+        "sales_revenue": sales_revenue,
+        "business_costs": business_costs
     }
     var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
     if file:
@@ -255,14 +396,32 @@ func _load_game() -> void:
     if not file:
         return
     var data = JSON.parse_string(file.get_as_text())
-    if data is Dictionary and data.get("version", 0) == 1:
+    if data is Dictionary and int(data.get("version", 0)) >= 1:
         cash = int(data.get("cash", START_CASH))
         bakery_tile = Vector2i(int(data.get("bakery_x", -1)), int(data.get("bakery_y", -1)))
+        flour = int(data.get("flour", 20))
+        bread = int(data.get("bread", 5))
+        oven_level = int(data.get("oven_level", 1))
+        storage_level = int(data.get("storage_level", 1))
+        customers_served = int(data.get("customers_served", 0))
+        sales_revenue = int(data.get("sales_revenue", 0))
+        business_costs = int(data.get("business_costs", BAKERY_COST if bakery_tile.x >= 0 else 0))
 
 func _reset() -> void:
     cash = START_CASH
     bakery_tile = Vector2i(-1, -1)
     build_mode = false
+    flour = 20
+    bread = 5
+    oven_level = 1
+    storage_level = 1
+    customers_served = 0
+    sales_revenue = 0
+    business_costs = 0
+    production_clock = 0.0
+    customer_clock = 0.0
+    if bakery_panel != null:
+        bakery_panel.visible = false
     _save_game()
     _refresh_ui()
     queue_redraw()
