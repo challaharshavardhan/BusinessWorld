@@ -357,7 +357,7 @@ func _spawn_customer() -> void:
         return
     var type_max := 3 if machine_unlocked else 2
     var kind := randi_range(0, type_max)
-    var shirt := [Color("#6ba6d8"), Color("#b76d83"), Color("#7fbe64"), Color("#e7bd55")][kind]
+    var shirt: Color = [Color("#6ba6d8"), Color("#b76d83"), Color("#7fbe64"), Color("#e7bd55")][kind]
     var character := _person(market_root, Vector3(1.0, 0, 7.8), shirt, kind == 0)
     var request := _text3d(character, Vector3(0, 2.85, 0), PRODUCT_NAMES[kind], 32)
     request.modulate = PRODUCT_COLORS[kind]
