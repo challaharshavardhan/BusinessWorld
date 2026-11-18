@@ -1,22 +1,19 @@
-; Engine configuration file.
-; Business World v0.1
-
+; Market Days — original 3D market management prototype
 config_version=5
 
 [application]
-config/name="Supply Yard"
+config/name="Market Days"
 run/main_scene="res://main.tscn"
-config/features=PackedStringArray("4.3", "GL Compatibility")
+config/features=PackedStringArray("4.4", "GL Compatibility")
 
 [display]
-window/size/viewport_width=720
-window/size/viewport_height=1280
+window/size/viewport_width=1280
+window/size/viewport_height=720
 window/stretch/mode="canvas_items"
-window/handheld/orientation=1
+window/handheld/orientation=0
 
 [rendering]
 textures/vram_compression/import_etc2_astc=true
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
-textures/default_filters/use_nearest_mipmap_filter=false
-environment/defaults/default_clear_color=Color(0.69, 0.85, 0.94, 1)
+environment/defaults/default_clear_color=Color(0.73, 0.86, 0.96, 1)
