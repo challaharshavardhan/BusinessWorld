@@ -16,6 +16,14 @@ var cash_stack_label: Label3D
 var flying_cash: Array[Dictionary] = []
 var served := 0
 var machine_unlocked := false
+var expansion_level := 0
+var east_wing: Node3D
+var orchard_wing: Node3D
+var expansion_pad: Node3D
+var expansion_label: Label3D
+var expand_button: Button
+var farm_stock := 12
+var orchard_stock := 12
 var workers_hired := 0
 var workers: Array[Node3D] = []
 var worker_clock := 0.0
@@ -272,6 +280,81 @@ func _make_market() -> void:
     for i in range(workers_hired):
         _spawn_worker(i)
     _update_shelf_labels()
+    _make_expanded_world()
+
+func _make_expanded_world() -> void:
+    # Land is constructed once and revealed only after a purchase.
+    east_wing = Node3D.new()
+    orchard_wing = Node3D.new()
+    market_root.add_child(east_wing)
+    market_root.add_child(orchard_wing)
+
+    # The east yard connects to the original market floor at x=11.
+    _box(east_wing, Vector3(17.2, -0.17, 0), Vector3(12.5, 0.30, 16.5), Color("#9ec96b"))
+    _box(east_wing, Vector3(17.1, 0.025, 0.0), Vector3(10.6, 0.10, 2.7), Color("#ebd3a1"))
+    _box(east_wing, Vector3(17.2, 0.45, -2.4), Vector3(4.6, 0.9, 1.7), Color("#a36a43"))
+    _box(east_wing, Vector3(17.2, 0.93, -2.4), Vector3(4.9, 0.16, 2.0), Color("#4c9fae"))
+    _text3d(east_wing, Vector3(17.2, 2.3, -2.4), "WHOLESALE  $9 / ITEM", 42)
+    for i in range(5):
+        _box(east_wing, Vector3(15.3 + float(i) * 0.88, 1.11, -2.4), Vector3(0.64, 0.18, 0.48), Color("#5bcb7e"))
+    _box(east_wing, Vector3(17.9, 0.3, 4.1), Vector3(3.4, 0.56, 2.3), Color("#c88e54"))
+    _text3d(east_wing, Vector3(17.9, 2.1, 4.1), "HARVEST TOMATOES", 40)
+    for i in range(4):
+        for j in range(3):
+            _ball(east_wing, Vector3(16.6 + i * 0.75, 0.72, 3.3 + j * 0.7), 0.24, Color("#e84d37"))
+    _fence(east_wing, Vector3(11.8, 0, -7.2), Vector3(23.0, 0, -7.2), 8)
+    _fence(east_wing, Vector3(11.8, 0, 7.2), Vector3(23.0, 0, 7.2), 8)
+    _tree(east_wing, Vector3(21.0, 0, 4.7))
+    _tree(east_wing, Vector3(14.2, 0, -4.8))
+    _house(east_wing, Vector3(20.4, 0, -4.4), Color("#f4d4a2"))
+
+    # Second purchasable parcel: a carrot orchard connected to the east yard.
+    _box(orchard_wing, Vector3(29.7, -0.17, 0), Vector3(12.5, 0.30, 16.5), Color("#92bd62"))
+    _box(orchard_wing, Vector3(29.5, 0.025, 0), Vector3(10.7, 0.09, 2.4), Color("#e9cea0"))
+    _box(orchard_wing, Vector3(30, 0.25, 3.9), Vector3(4.5, 0.5, 3.4), Color("#c59358"))
+    _text3d(orchard_wing, Vector3(30, 2.0, 3.9), "CARROT FARM", 45)
+    for i in range(4):
+        for j in range(4):
+            _ball(orchard_wing, Vector3(28.4 + i * 0.97, 0.63, 2.5 + j * 0.85), 0.21, Color("#f4a637"))
+    _tree(orchard_wing, Vector3(25.5, 0, -5.4))
+    _tree(orchard_wing, Vector3(33, 0, -5.1))
+    _tree(orchard_wing, Vector3(34, 0, 5.5))
+    _house(orchard_wing, Vector3(29.4, 0, -4.5), Color("#eebd9b"))
+    _fence(orchard_wing, Vector3(23.5, 0, -7.2), Vector3(35.5, 0, -7.2), 8)
+    _fence(orchard_wing, Vector3(23.5, 0, 7.2), Vector3(35.5, 0, 7.2), 8)
+
+    expansion_pad = Node3D.new()
+    market_root.add_child(expansion_pad)
+    _box(expansion_pad, Vector3(0, 0.03, 0), Vector3(2.2, 0.11, 2.2), Color("#4baab1"))
+    _box(expansion_pad, Vector3(0, 0.1, 0), Vector3(1.8, 0.13, 1.8), Color("#8edb58"))
+    expansion_label = _text3d(expansion_pad, Vector3(0, 1.05, 0), "EXPAND LAND", 38)
+    _refresh_expansion_world()
+
+func _expansion_cost() -> int:
+    return 150 if expansion_level == 0 else 260
+
+func _refresh_expansion_world() -> void:
+    if east_wing == null:
+        return
+    east_wing.visible = expansion_level >= 1
+    orchard_wing.visible = expansion_level >= 2
+    expansion_pad.visible = expansion_level < 2
+    expansion_pad.position = Vector3(9.1, 0, -4.9) if expansion_level == 0 else Vector3(21.4, 0, -4.9)
+    expansion_label.text = "EXPAND LAND  $%d" % _expansion_cost() if expansion_level < 2 else "ALL LAND OPEN"
+
+func _expand_world() -> void:
+    if play_mode != "market" or expansion_level >= 2:
+        return
+    var cost := _expansion_cost()
+    if cash < cost:
+        _say("Collect $%d more to unlock new land." % (cost - cash))
+        return
+    cash -= cost
+    expansion_level += 1
+    _refresh_expansion_world()
+    _say("New land unlocked! Walk EAST to explore.")
+    _save_game()
+    _refresh_ui()
 
 func _spawn_worker(index: int) -> void:
     var start := Vector3(-0.5 + float(index) * 0.8, 0, 3.4)
