@@ -63,12 +63,15 @@ jobs:
       - name: Import Godot assets and check scripts
         run: godot --headless --editor --path . --import
 
+      - name: Check GDScript syntax
+        run: godot --headless --path . --check-only --script res://scripts/main.gd
+
       - name: Export APK
         run: godot --headless --path . --export-debug "Android" build/BusinessWorld-debug.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: BusinessWorld-Android-v0.2
+          name: BusinessWorld-Android-v0.3
           path: build/BusinessWorld-debug.apk
           if-no-files-found: error
