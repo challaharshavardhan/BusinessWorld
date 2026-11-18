@@ -421,11 +421,12 @@ func _make_ui() -> void:
     thumb_style.set_corner_radius_all(50)
     joystick_thumb.add_theme_stylebox_override("panel", thumb_style)
 
-func _set_zoom(new_size: float) -> void:
+func _set_zoom(new_size: float, persist: bool = true) -> void:
     camera_zoom_size = clampf(new_size, 7.5, 22.0)
     if play_mode == "market":
         camera.size = camera_zoom_size
-    _save_game()
+    if persist:
+        _save_game()
 
 func _focus_player() -> void:
     camera_follow = true
@@ -610,22 +611,48 @@ func _input(event: InputEvent) -> void:
     if play_mode != "market":
         return
     if event is InputEventScreenTouch:
-        if event.pressed and joystick_index < 0 and event.position.x < 420 and event.position.y > 230:
-            joystick_index = event.index
-            joystick_origin = event.position
+        if event.pressed:
+            touch_positions[event.index] = event.position
+            if touch_positions.size() == 1 and joystick_index < 0 and event.position.x < 420 and event.position.y > 230:
+                joystick_index = event.index
+                joystick_origin = event.position
+                joystick_direction = Vector2.ZERO
+            if touch_positions.size() >= 2:
+                joystick_direction = Vector2.ZERO
+                pinch_distance = 0.0
+        else:
+            touch_positions.erase(event.index)
+            if event.index == joystick_index:
+                joystick_index = -1
+            if touch_positions.size() < 2:
+                pinch_distance = 0.0
+                _save_game()
             joystick_direction = Vector2.ZERO
-        elif not event.pressed and joystick_index == event.index:
-            joystick_index = -1
+    elif event is InputEventScreenDrag:
+        touch_positions[event.index] = event.position
+        if touch_positions.size() >= 2:
+            var coords := touch_positions.values()
+            var distance: float = (coords[0] as Vector2).distance_to(coords[1] as Vector2)
+            if pinch_distance > 10.0 and distance > 10.0:
+                _set_zoom(camera_zoom_size * pinch_distance / distance, false)
+            pinch_distance = distance
             joystick_direction = Vector2.ZERO
-    elif event is InputEventScreenDrag and event.index == joystick_index:
-        joystick_direction = (event.position - joystick_origin).limit_length(80.0) / 80.0
-    elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-        if event.pressed and event.position.x < 420 and event.position.y > 230:
-            mouse_joystick = true
-            joystick_origin = event.position
-        elif not event.pressed:
-            mouse_joystick = false
-            joystick_direction = Vector2.ZERO
+        elif event.index == joystick_index:
+            joystick_direction = (event.position - joystick_origin).limit_length(80.0) / 80.0
+    elif event is InputEventMagnifyGesture:
+        _set_zoom(camera_zoom_size / maxf(event.factor, 0.1))
+    elif event is InputEventMouseButton:
+        if event.button_index == MOUSE_BUTTON_WHEEL_UP and event.pressed:
+            _set_zoom(camera_zoom_size - 0.8)
+        elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN and event.pressed:
+            _set_zoom(camera_zoom_size + 0.8)
+        elif event.button_index == MOUSE_BUTTON_LEFT:
+            if event.pressed and event.position.x < 420 and event.position.y > 230:
+                mouse_joystick = true
+                joystick_origin = event.position
+            elif not event.pressed:
+                mouse_joystick = false
+                joystick_direction = Vector2.ZERO
     elif event is InputEventMouseMotion and mouse_joystick:
         joystick_direction = (event.position - joystick_origin).limit_length(80.0) / 80.0
     if joystick_thumb != null:
