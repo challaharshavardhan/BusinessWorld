@@ -9,13 +9,14 @@ An original Godot 4.4 Android game inspired by the gameplay in the user-provided
 - **Staff:** on the right side of the market, the **HIRE $70** button appears, with later workers costing $130 and $190, up to three. You need enough cash from checkout sales before hiring. Hired staff are visible blue-clothed NPCs, move between shelves and checkout, automatically fulfill queued orders when stock is available, and earn shop revenue.
 - **Dedicated egg counter:** **EGG STALL $80** unlocks a separate egg station on the **left/front side** of the market, away from tomato, cabbage, and carrot shelves. Eggs restock and can appear in future customer orders.
 - **Playable character:** labeled YOU, visible toward the front of the market in the close-up view.
+- **Front express checkout:** an additional interactive teal counter on the market's foreground; bring the requested goods to its marked collection spot to serve the next customer.
 - Worker hires and camera zoom are saved alongside your existing cash, product, and market data.
 
 ## How to play
 1. Open Market Days. Select **Enter Market** from the town overview.
 2. Move your avatar using the touch joystick in the lower-left portion of the display. Walk near a produce shelf to automatically pick up up to five items.
-3. Read the **NEXT:** order at the top. Bring that type of produce to checkout near the middle; cash increases when the sale completes.
-4. Once you have $70, tap **HIRE $70**. You'll see a worker appear and begin automatically helping serve customers. Hire up to three.
+3. Read the **NEXT:** order at the top. Bring that type of produce to the main checkout or the new **front express checkout**; cash increases when the sale completes.
+4. Tap **HIRE $70** to see the required price; if you need cash, complete a few orders first. Once you have $70, tap **HIRE $70**. You'll see a worker appear and begin automatically helping serve customers. Hire up to three.
 5. With $80, tap **EGG STALL $80** or step on the green unlock pad. The new egg station appears on the left side.
 6. Use **ZOOM + / ZOOM −**, pinch with two fingers, or **FOCUS PLAYER** to adjust the view.
 
