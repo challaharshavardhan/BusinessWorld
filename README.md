@@ -1,29 +1,46 @@
-# Market Days — 3D market game v1.1
+# Market Days — 3D Market v1.2
 
-An original Godot 4.4 Android game inspired by the gameplay in the user-provided recording. It does not use the source game's logo, art assets, characters, meshes, or code.
+A playable, independently created Android market simulation inspired by the user's reference recording. The game does not contain the original game's branding, meshes, artwork, or code.
 
-## New in v1.1
-- **Close-up camera:** opens the market zoomed in on the playable character rather than the whole platform.
-- **Zoom controls:** **ZOOM +**, **ZOOM −**, phone two-finger pinch gestures, and mouse-wheel zoom in desktop tests.
-- **Focus player:** camera follows your avatar as you walk; press **FOCUS PLAYER** if needed.
-- **Staff:** on the right side of the market, the **HIRE $70** button appears, with later workers costing $130 and $190, up to three. You need enough cash from checkout sales before hiring. Hired staff are visible blue-clothed NPCs, move between shelves and checkout, automatically fulfill queued orders when stock is available, and earn shop revenue.
-- **Dedicated egg counter:** **EGG STALL $80** unlocks a separate egg station on the **left/front side** of the market, away from tomato, cabbage, and carrot shelves. Eggs restock and can appear in future customer orders.
-- **Playable character:** labeled YOU, visible toward the front of the market in the close-up view.
-- **Front express checkout:** an additional interactive teal counter on the market's foreground; bring the requested goods to its marked collection spot to serve the next customer.
-- Worker hires and camera zoom are saved alongside your existing cash, product, and market data.
+## New in v1.2
 
-## How to play
-1. Open Market Days. Select **Enter Market** from the town overview.
-2. Move your avatar using the touch joystick in the lower-left portion of the display. Walk near a produce shelf to automatically pick up up to five items.
-3. Read the **NEXT:** order at the top. Bring that type of produce to the main checkout or the new **front express checkout**; cash increases when the sale completes.
-4. Tap **HIRE $70** to see the required price; if you need cash, complete a few orders first. Once you have $70, tap **HIRE $70**. You'll see a worker appear and begin automatically helping serve customers. Hire up to three.
-5. With $80, tap **EGG STALL $80** or step on the green unlock pad. The new egg station appears on the left side.
-6. Use **ZOOM + / ZOOM −**, pinch with two fingers, or **FOCUS PLAYER** to adjust the view.
+### Visible money
+- After each customer sale, a small **floating green banknote** shows the payment.
+- Payments accumulate into a **stack of green bills** at the **$ CASH** collection mat beside the main checkout on the left side.
+- The HUD separately shows **WALLET** (spendable cash) and **PICKUP** (money waiting on the mat).
+- **Walk to the cash mat to pick up your earnings**. Money is not spendable for workers or land purchases until collected.
+- Workers and the wholesale market also deposit earnings into that pile.
+- Pending money is saved across app sessions.
 
-## APK
-Go to GitHub **Actions** → most recent successful **Build Android APK** run → download artifact **MarketDays-3D-v1.1** → extract ZIP and install the APK.
+### Expand the world
+- Tap the **EXPAND $150** button (or walk onto the land pad when you have enough spendable cash) to unlock **East Yard**.
+- The new walkable land connects to the right/east edge of the original market.
+- In East Yard, approach the tomato table to automatically harvest tomatoes, or deliver any carried produce at the **WHOLESALE $9/ITEM** counter. Wholesale earnings are deposited into the cash pile for collection.
+- After East Yard, **EXPAND $260** unlocks the **Orchard**, with a new carrot harvesting table, trees, fences, and cottages. Wholesale payout increases to $11/item.
+- Both extensions persist in the local save and remain accessible whenever you enter the market.
+- Player movement and follow camera support both new areas.
 
-**Note:** GitHub Actions currently creates a fresh debug signing key on each build. Android may not let you install the new APK over your previous one; if you uninstall the old package, its on-device save is erased. The older Market Days v1 project is archived at `archive/market-days-3d-v1`.
+## Existing game features
+- Isometric 3D town overview and landscape market interior.
+- Touch joystick player movement; **ZOOM +**, **ZOOM -**, two-finger pinch and follow-camera.
+- Shop shelves for tomato, cabbage and carrot, customer line and matching customer orders.
+- Main checkout and front express checkout.
+- Hire up to 3 workers (first $70, second $130, third $190) to serve customers automatically.
+- Unlock the egg counter ($80), located separately on the left side of the market.
+- Locally saved cash, goods, staff, camera zoom, and progress.
+
+## Gameplay
+1. Press **Enter Market**.
+2. Move to a shelf using the touch joystick; collecting produce is automatic.
+3. Read **NEXT:** in the HUD and take the correct produce to the main or front checkout.
+4. Follow the **green money bundles** to the **$ CASH** mat near the main checkout. Pick up cash by walking to the mat.
+5. Spend money on **HIRE**, **EGG STALL**, or **EXPAND**.
+6. Explore East Yard and the Orchard with the joystick; use the zoom controls to see more or less of the map.
+
+## Android install
+Go to [GitHub Actions](https://github.com/challaharshavardhan/BusinessWorld/actions), open the latest successful Android run, download **MarketDays-3D-v1.2** from Artifacts, extract the ZIP and install the APK.
+
+**Installation caution:** Each GitHub CI run currently creates a new Android debug signing key; Android may refuse an in-place update. Uninstalling the older APK erases that version's local game progress.
 
 ## Scope
-This is an independent **playable recreation prototype**, not a duplication of the proprietary source game. Models are simple low-poly originals, with basic shopper/worker animation and simplified economics.
+This is an original low-poly 3D prototype with functional cash piles and two new regions; it is not a copy of any proprietary source game's assets or full content.
