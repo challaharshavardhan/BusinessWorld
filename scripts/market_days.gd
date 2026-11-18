@@ -235,6 +235,11 @@ func _make_market() -> void:
     _box(market_root, Vector3(-2.3, 1.84, -0.9), Vector3(3.45, 0.18, 1.77), Color("#b26a4c"))
     _box(market_root, Vector3(-2.3, 2.25, -1.1), Vector3(0.75, 0.7, 0.6), Color("#278fb8"))
     _box(market_root, Vector3(-2.3, 2.61, -1.1), Vector3(0.8, 0.08, 0.65), Color("#51badd"))
+    # Front express checkout: a second playable station in the foreground.
+    _box(market_root, Vector3(-2.4, 0.55, 5.65), Vector3(3.2, 1.05, 1.15), Color("#9f6847"))
+    _box(market_root, Vector3(-2.4, 1.15, 5.65), Vector3(3.4, 0.16, 1.35), Color("#45adc1"))
+    _box(market_root, Vector3(-2.4, 0.04, 4.0), Vector3(2.3, 0.05, 1.5), Color("#49b9b8"))
+    _text3d(market_root, Vector3(-2.4, 2.3, 5.65), "EXPRESS CHECKOUT", 33)
     _box(market_root, Vector3(-5.0, 0.05, 0.1), Vector3(1.8, 0.07, 1.2), Color("#49917f"))
     _text3d(market_root, Vector3(-5.0, 0.45, 0.1), "$ CASH", 28)
     _box(market_root, Vector3(2.5, 0.035, 3.5), Vector3(2.2, 0.06, 2.2), Color("#389fb4"))
@@ -591,7 +596,9 @@ func _try_interact() -> void:
                 _update_shelf_labels()
                 _save_game()
                 return
-    if carry_count > 0 and player.position.distance_to(Vector3(-2.3, 0, 0.55)) < 2.0 and customer_queue.size() > 0:
+    var at_main_checkout := player.position.distance_to(Vector3(-2.3, 0, 0.55)) < 2.0
+    var at_express_checkout := player.position.distance_to(Vector3(-2.4, 0, 4.0)) < 1.9
+    if carry_count > 0 and (at_main_checkout or at_express_checkout) and customer_queue.size() > 0:
         var kind: int = int(customer_queue[0]["kind"])
         if kind == carry_type:
             var customer: Node3D = customer_queue[0]["node"]
